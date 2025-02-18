@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "879278142644",
+    "project_id": "doorunlock-eeaad",
+    "storage_bucket": "doorunlock-eeaad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:879278142644:android:ed8f8e3e08469456dcd3e1",
+        "android_client_info": {
+          "package_name": "com.example.door_lock_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJInpEc4bwZ8JXt_LFpqYnMlY5wJfEKPs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

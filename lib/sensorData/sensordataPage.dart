@@ -1,3 +1,4 @@
+import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -22,7 +23,7 @@ class _SensorDataState extends State<SensorData>
   // Sensor data values
   double _temperature = 0.0;
   int _humidity = 0;
-  int _distance = 0;
+  double _distance = 0;
   bool _objectDetected = false;
   bool _gasDetected = false;
   int _gasValue = 0;
@@ -83,19 +84,30 @@ class _SensorDataState extends State<SensorData>
       // Listen to sensor data changes
       _sensorDataSubscription = databaseRef.onValue.listen((event) {
         if (event.snapshot.value != null) {
-          final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+          final dynamic snapshotValue = event.snapshot.value;
 
-          setState(() {
-            _temperature = double.parse(data['temperature'].toString());
-            _humidity = int.parse(data['humidity'].toString());
-            _distance = int.parse(data['distance'].toString());
-            _objectDetected = data['objectDetected'] ?? false;
-            _gasDetected = data['gasDetected'] ?? false;
-            _gasValue = int.parse(data['gasValue'].toString());
-            _isLoading = false;
-            _hasError = false;
-            _lastUpdated = DateTime.now();
-          });
+          if (snapshotValue is Map<dynamic, dynamic>) {
+            final data = Map<String, dynamic>.from(snapshotValue);
+
+            setState(() {
+              _temperature =
+                  double.tryParse(data['temperature'].toString()) ?? 0.0;
+              _humidity = int.tryParse(data['humidity'].toString()) ?? 0;
+              _distance = double.tryParse(data['distance'].toString()) ?? 0;
+              _objectDetected = data['objectDetected'] ?? false;
+              _gasDetected = data['gasDetected'] ?? false;
+              _gasValue = int.tryParse(data['gasValue'].toString()) ?? 0;
+              _isLoading = false;
+              _hasError = false;
+              _lastUpdated = DateTime.now();
+            });
+          } else {
+            setState(() {
+              _isLoading = false;
+              _hasError = true;
+              _errorMessage = 'Invalid sensor data format';
+            });
+          }
         } else {
           setState(() {
             _isLoading = false;
@@ -596,7 +608,7 @@ class _SensorDataState extends State<SensorData>
           child: _buildAnimatedSafetyCard(
             title: 'Gas',
             value: '$_gasValue',
-            subtitle: _gasDetected ? 'Gas Detected!' : 'Normal',
+            subtitle: _gasDetected ? 'Detected!' : 'Normal',
             icon: Icons.cloud_outlined,
             isAlert: _gasDetected,
             alertColor: Colors.red.shade700,
@@ -608,7 +620,7 @@ class _SensorDataState extends State<SensorData>
           child: _buildAnimatedSafetyCard(
             title: 'Distance',
             value: '$_distance cm',
-            subtitle: _objectDetected ? 'Object Detected' : 'Clear',
+            subtitle: _objectDetected ? 'Detected' : 'Clear',
             icon: Icons.sensors_outlined,
             isAlert: _objectDetected && _distance < 10,
             alertColor: Colors.amber.shade700,

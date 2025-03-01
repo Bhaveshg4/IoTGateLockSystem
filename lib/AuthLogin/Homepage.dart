@@ -1,406 +1,94 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
 
-class NextLevelUserDashboard extends StatefulWidget {
+class HomePage extends StatefulWidget {
+  const HomePage({Key? key}) : super(key: key);
+
   @override
-  _NextLevelUserDashboardState createState() => _NextLevelUserDashboardState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _NextLevelUserDashboardState extends State<NextLevelUserDashboard>
+class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
-  // Enhanced Color Palette
-  final Color _primaryColor = Color(0xFF2C3E50);
-  final Color _accentColor = Color(0xFF3498DB);
-  final Color _backgroundColor = Color(0xFFF8F9FA);
-  final Color _cardColor = Colors.white;
-  final Color _textColor = Color(0xFF2C3E50);
-
-  late AnimationController _animationController;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
-      duration: Duration(milliseconds: 300),
     );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Interval(0.2, 1.0, curve: Curves.easeOut),
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+    ));
+
+    _controller.forward();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
-    _searchController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: ThemeData(
-        brightness: Brightness.light,
-        primaryColor: _primaryColor,
-        scaffoldBackgroundColor: _backgroundColor,
-        fontFamily: 'Poppins',
-      ),
-      child: Scaffold(
-        body: CustomScrollView(
-          slivers: [
-            _buildSliverAppBar(),
-            SliverToBoxAdapter(child: _buildSearchBar()),
-            SliverPadding(
-              padding: EdgeInsets.all(16),
-              sliver: _buildUserGrid(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 600;
 
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      expandedHeight: 120.0,
-      floating: false,
-      pinned: true,
-      stretch: true,
-      backgroundColor: _primaryColor,
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          'User Management',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-          ),
-        ),
-        background: Container(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                _primaryColor,
-                _accentColor,
+                Colors.blue.shade900,
+                Colors.purple.shade900,
               ],
             ),
           ),
-        ),
-      ),
-      actions: [
-        IconButton(
-          icon: Icon(Icons.notifications_outlined),
-          onPressed: () {},
-        ),
-        IconButton(
-          icon: Icon(Icons.settings_outlined),
-          onPressed: () {},
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 200),
-      margin: EdgeInsets.fromLTRB(16, 8, 16, 8),
-      decoration: BoxDecoration(
-        color: _cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (value) {
-          setState(() => _searchQuery = value.toLowerCase());
-        },
-        style: TextStyle(color: _textColor),
-        decoration: InputDecoration(
-          hintText: 'Search users...',
-          hintStyle: TextStyle(color: _textColor.withOpacity(0.5)),
-          prefixIcon: Icon(Icons.search_rounded, color: _accentColor),
-          suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: Icon(Icons.clear_rounded, color: _accentColor),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserGrid() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return SliverToBoxAdapter(
-            child: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(_accentColor),
-              ),
-            ),
-          );
-        }
-
-        var users = snapshot.data!.docs.where((doc) {
-          var userData = doc.data() as Map<String, dynamic>;
-          return userData['fullName']
-              .toString()
-              .toLowerCase()
-              .contains(_searchQuery);
-        }).toList();
-
-        return SliverGrid(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: _calculateCrossAxisCount(context),
-            childAspectRatio: 0.85,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              var userData = users[index].data() as Map<String, dynamic>;
-              return _buildUserCard(userData, users[index].id);
-            },
-            childCount: users.length,
-          ),
-        );
-      },
-    );
-  }
-
-  int _calculateCrossAxisCount(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
-    if (width > 1400) return 5;
-    if (width > 1100) return 4;
-    if (width > 800) return 3;
-    if (width > 500) return 2;
-    return 1;
-  }
-
-  Widget _buildUserCard(Map<String, dynamic> user, String userId) {
-    bool isActive = user['disableToLogin'] ?? false;
-
-    return Hero(
-      tag: 'user-$userId',
-      child: Material(
-        child: InkWell(
-          onTap: () => _showUserDetails(user, userId),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: _cardColor,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            _accentColor.withOpacity(0.2),
-                            _primaryColor.withOpacity(0.2),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.person_outline_rounded,
-                      size: 40,
-                      color: _accentColor,
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: isActive ? Colors.green : Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isActive ? Icons.check : Icons.close,
-                          size: 12,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16),
-                Text(
-                  user['fullName'] ?? 'Unknown',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: _textColor,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 4),
-                Text(
-                  user['email'] ?? 'No Email',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _textColor.withOpacity(0.6),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 16),
-                _buildActionButtons(userId, isActive),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(String userId, bool isActive) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildIconButton(
-          icon: Icons.delete_outline_rounded,
-          color: Colors.red,
-          onPressed: () => _deleteUser(userId),
-        ),
-        _buildIconButton(
-          icon: isActive
-              ? Icons.block_rounded
-              : Icons.check_circle_outline_rounded,
-          color: isActive ? Colors.orange : Colors.green,
-          onPressed: () =>
-              isActive ? _deactivateUser(userId) : _activateUser(userId),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildIconButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return Container(
-      width: 40,
-      height: 40,
-      child: Material(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(12),
-          child: Icon(icon, size: 20, color: color),
-        ),
-      ),
-    );
-  }
-
-  void _showUserDetails(Map<String, dynamic> user, String userId) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        maxChildSize: 0.95,
-        minChildSize: 0.5,
-        builder: (_, controller) => Container(
-          decoration: BoxDecoration(
-            color: _backgroundColor,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-          ),
-          child: Column(
+          child: Stack(
             children: [
-              Container(
-                margin: EdgeInsets.only(top: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Expanded(
-                child: CustomScrollView(
-                  controller: controller,
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildDetailHeader(user),
-                            SizedBox(height: 24),
-                            _buildDetailSection('Personal Information', [
-                              _buildDetailTile(
-                                'Username',
-                                user['username'] ?? 'N/A',
-                                Icons.account_circle_outlined,
-                              ),
-                              _buildDetailTile(
-                                'Email',
-                                user['email'] ?? 'N/A',
-                                Icons.email_outlined,
-                              ),
-                              _buildDetailTile(
-                                'Unique Code',
-                                user['UniqueCode'] ?? 'N/A',
-                                Icons.qr_code_rounded,
-                              ),
-                            ]),
-                            SizedBox(height: 24),
-                            _buildDetailSection('Account Statistics', [
-                              _buildDetailTile(
-                                'Created At',
-                                _formatTimestamp(user['createdAt']),
-                                Icons.calendar_today_outlined,
-                              ),
-                              _buildDetailTile(
-                                'Code Changes',
-                                '${user['codeChangeCount'] ?? 0} times',
-                                Icons.change_history_rounded,
-                              ),
-                            ]),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+              // Background elements
+              ..._buildBackgroundElements(),
+
+              // Main content
+              SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 24 : size.width * 0.1,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Spacer(flex: 2),
+                      _buildHeader(isSmallScreen),
+                      const Spacer(flex: 3),
+                      _buildOptions(isSmallScreen, context),
+                      const Spacer(flex: 2),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -410,218 +98,211 @@ class _NextLevelUserDashboardState extends State<NextLevelUserDashboard>
     );
   }
 
-  Widget _buildDetailHeader(Map<String, dynamic> user) {
-    return Column(
-      children: [
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                _accentColor.withOpacity(0.2),
-                _primaryColor.withOpacity(0.2),
-              ],
-            ),
-          ),
-          child: Icon(
-            Icons.person_outline_rounded,
-            size: 50,
-            color: _accentColor,
-          ),
+  List<Widget> _buildBackgroundElements() {
+    return [
+      // Floating circles
+      Positioned(
+        top: -100,
+        right: -100,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: 1.2,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.05),
+                ),
+              ),
+            );
+          },
         ),
-        SizedBox(height: 16),
-        Text(
-          user['fullName'] ?? 'Unknown',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: _textColor,
-          ),
-        ),
-        Text(
-          user['email'] ?? 'No Email',
-          style: TextStyle(
-            fontSize: 16,
-            color: _textColor.withOpacity(0.6),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDetailSection(String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: _textColor,
-          ),
-        ),
-        SizedBox(height: 16),
-        ...children,
-      ],
-    );
-  }
-
-  Widget _buildDetailTile(String label, String value, IconData icon) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _accentColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              size: 24,
-              color: _accentColor,
-            ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: _textColor.withOpacity(0.6),
-                  ),
+      Positioned(
+        bottom: -150,
+        left: -150,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: 1.2,
+              child: Container(
+                width: 500,
+                height: 500,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.05),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: _textColor,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            );
+          },
+        ),
+      ),
+      // Glass effect overlay
+      Positioned.fill(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: Container(
+            color: Colors.transparent,
           ),
-        ],
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildHeader(bool isSmallScreen) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Column(
+          children: [
+            ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                colors: [Colors.white, Colors.white70],
+              ).createShader(bounds),
+              child: Text(
+                'Home',
+                style: GoogleFonts.poppins(
+                  fontSize: isSmallScreen ? 32 : 40,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+            SizedBox(height: isSmallScreen ? 16 : 20),
+            Text(
+              'Choose an option to proceed',
+              style: GoogleFonts.poppins(
+                fontSize: isSmallScreen ? 16 : 18,
+                color: Colors.white70,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // Delete User from Database
-  void _deleteUser(String userId) async {
-    try {
-      await FirebaseFirestore.instance.collection('users').doc(userId).delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('User deleted successfully'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+  Widget _buildOptions(bool isSmallScreen, BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Container(
+          constraints: BoxConstraints(maxWidth: 600),
+          child: Column(
+            children: [
+              _OptionCard(
+                icon: Icons.lock_open_rounded,
+                title: 'Unlock Door',
+                subtitle: 'Use a password to unlock your door',
+                onTap: () {
+                  // Navigate to password unlock screen
+                },
+                isSmallScreen: isSmallScreen,
+              ),
+              SizedBox(height: isSmallScreen ? 24 : 32),
+              _OptionCard(
+                icon: Icons.sensors_rounded,
+                title: 'Sensor Data',
+                subtitle: 'View real-time sensor data',
+                onTap: () {
+                  // Navigate to sensor data screen
+                },
+                isSmallScreen: isSmallScreen,
+              ),
+            ],
           ),
         ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to delete user'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    }
+      ),
+    );
   }
+}
 
-// Activate User
-  void _activateUser(String userId) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .update({'disableToLogin': true});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('User activated successfully'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to activate user'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    }
-  }
+class _OptionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool isSmallScreen;
 
-// Deactivate User
-  void _deactivateUser(String userId) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .update({'disableToLogin': false});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('User deactivated successfully'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to deactivate user'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    }
-  }
+  const _OptionCard({
+    Key? key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    required this.isSmallScreen,
+  }) : super(key: key);
 
-// Timestamp Formatter
-  String _formatTimestamp(Timestamp? timestamp) {
-    if (timestamp == null) return 'N/A';
-    return DateFormat('dd MMM yyyy, hh:mm a').format(timestamp.toDate());
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white.withOpacity(0.1),
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onTap,
+            child: Padding(
+              padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    size: isSmallScreen ? 40 : 48,
+                    color: Colors.white,
+                  ),
+                  SizedBox(width: isSmallScreen ? 16 : 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.poppins(
+                            fontSize: isSmallScreen ? 20 : 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          subtitle,
+                          style: GoogleFonts.poppins(
+                            fontSize: isSmallScreen ? 14 : 16,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

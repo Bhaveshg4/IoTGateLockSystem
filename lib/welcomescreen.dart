@@ -75,9 +75,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF1A237E),
-                Color(0xFF0D47A1),
-                Color(0xFF1565C0),
+                Colors.blue.shade900,
+                Colors.purple.shade900,
               ],
             ),
           ),

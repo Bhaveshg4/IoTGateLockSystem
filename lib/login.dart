@@ -1,4 +1,4 @@
-import 'package:door_lock_1/Verification.dart';
+import 'package:door_lock_1/UserHomepage.dart';
 import 'package:door_lock_1/register.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen>
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const VerificationScreen()),
+          MaterialPageRoute(builder: (context) => const UserHomePage()),
         );
       }
     } catch (e) {

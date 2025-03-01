@@ -1,3 +1,6 @@
+import 'package:door_lock_1/AuthLogin/manageuser.dart';
+import 'package:door_lock_1/CommonLogin.dart';
+import 'package:door_lock_1/sensorData/sensordataPage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -165,7 +168,7 @@ class _HomePageState extends State<HomePage>
                 colors: [Colors.white, Colors.white70],
               ).createShader(bounds),
               child: Text(
-                'Home',
+                'Authority Home',
                 style: GoogleFonts.poppins(
                   fontSize: isSmallScreen ? 32 : 40,
                   fontWeight: FontWeight.bold,
@@ -199,11 +202,14 @@ class _HomePageState extends State<HomePage>
           child: Column(
             children: [
               _OptionCard(
-                icon: Icons.lock_open_rounded,
-                title: 'Unlock Door',
-                subtitle: 'Use a password to unlock your door',
+                icon: Icons.security,
+                title: 'Manage Users',
+                subtitle: 'Manage users who have access to the door',
                 onTap: () {
-                  // Navigate to password unlock screen
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => NextLevelUserDashboard()));
                 },
                 isSmallScreen: isSmallScreen,
               ),
@@ -213,10 +219,52 @@ class _HomePageState extends State<HomePage>
                 title: 'Sensor Data',
                 subtitle: 'View real-time sensor data',
                 onTap: () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => SensorData()));
                   // Navigate to sensor data screen
                 },
                 isSmallScreen: isSmallScreen,
               ),
+              SizedBox(
+                height: 30,
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => LoginSelectionPage()),
+                  );
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: const Color.fromARGB(255, 96, 25, 210),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                    side: BorderSide(
+                        color: const Color.fromARGB(255, 156, 100, 246),
+                        width: 2),
+                  ),
+                  elevation: 5,
+                  shadowColor:
+                      const Color.fromARGB(255, 134, 29, 175).withOpacity(0.5),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.arrow_back_ios, size: 16),
+                    const SizedBox(width: 8),
+                    Text("Go back".toUpperCase()),
+                  ],
+                ),
+              )
             ],
           ),
         ),

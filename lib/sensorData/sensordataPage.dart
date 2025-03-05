@@ -1,4 +1,3 @@
-import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -23,9 +22,8 @@ class _SensorDataState extends State<SensorData>
   // Sensor data values
   double _temperature = 0.0;
   int _humidity = 0;
-  double _distance = 0;
-  bool _objectDetected = false;
   bool _gasDetected = false;
+  bool _fanisOn = false;
   int _gasValue = 0;
 
   // For real-time updates
@@ -93,9 +91,8 @@ class _SensorDataState extends State<SensorData>
               _temperature =
                   double.tryParse(data['temperature'].toString()) ?? 0.0;
               _humidity = int.tryParse(data['humidity'].toString()) ?? 0;
-              _distance = double.tryParse(data['distance'].toString()) ?? 0;
-              _objectDetected = data['objectDetected'] ?? false;
               _gasDetected = data['gasDetected'] ?? false;
+              _fanisOn = data['fanisOn'] ?? false;
               _gasValue = int.tryParse(data['gasValue'].toString()) ?? 0;
               _isLoading = false;
               _hasError = false;
@@ -128,6 +125,15 @@ class _SensorDataState extends State<SensorData>
         _hasError = true;
         _errorMessage = 'Error: ${e.toString()}';
       });
+    }
+  }
+
+  void _updateDeviceState(String device, bool state) {
+    try {
+      final databaseRef = FirebaseDatabase.instance.ref().child('sensorData');
+      databaseRef.update({device: state});
+    } catch (e) {
+      print('Error updating device state: $e');
     }
   }
 
@@ -305,10 +311,7 @@ class _SensorDataState extends State<SensorData>
   }
 
   Widget _buildHeader() {
-    bool isAnyAlert = _temperature > 35 ||
-        _humidity > 80 ||
-        _gasDetected ||
-        (_objectDetected && _distance < 10);
+    bool isAnyAlert = _temperature > 35 || _humidity > 80 || _gasDetected;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -397,116 +400,119 @@ class _SensorDataState extends State<SensorData>
     Color tempColor = _getTemperatureColor(_temperature);
     Color humidityColor = _getHumidityColor(_humidity);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          // Temperature indicator
-          Column(
-            children: [
-              CircularPercentIndicator(
-                radius: 70,
-                lineWidth: 13.0,
-                animation: true,
-                animationDuration: 1500,
-                percent: tempPercent,
-                center: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.thermostat_outlined,
-                      color: tempColor,
-                      size: 22,
-                    ),
-                    Text(
-                      '${_temperature.toStringAsFixed(1)}°C',
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            // Temperature indicator
+            Column(
+              children: [
+                CircularPercentIndicator(
+                  radius: 70,
+                  lineWidth: 13.0,
+                  animation: true,
+                  animationDuration: 1500,
+                  percent: tempPercent,
+                  center: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.thermostat_outlined,
+                        color: tempColor,
+                        size: 22,
+                      ),
+                      Text(
+                        '${_temperature.toStringAsFixed(1)}°C',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  circularStrokeCap: CircularStrokeCap.round,
+                  progressColor: tempColor,
+                  backgroundColor: tempColor.withOpacity(0.2),
+                  footer: Padding(
+                    padding: const EdgeInsets.only(top: 10.0),
+                    child: Text(
+                      'Temperature',
                       style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                         color: Colors.black87,
                       ),
                     ),
-                  ],
-                ),
-                circularStrokeCap: CircularStrokeCap.round,
-                progressColor: tempColor,
-                backgroundColor: tempColor.withOpacity(0.2),
-                footer: Padding(
-                  padding: const EdgeInsets.only(top: 10.0),
-                  child: Text(
-                    'Temperature',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
-                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              _buildTemperatureStatusText(),
-            ],
-          ),
+                const SizedBox(height: 8),
+                _buildTemperatureStatusText(),
+              ],
+            ),
 
-          // Humidity indicator
-          Column(
-            children: [
-              CircularPercentIndicator(
-                radius: 70,
-                lineWidth: 13.0,
-                animation: true,
-                animationDuration: 1500,
-                percent: humidityPercent,
-                center: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.water_drop_outlined,
-                      color: humidityColor,
-                      size: 22,
-                    ),
-                    Text(
-                      '$_humidity%',
+            // Humidity indicator
+            Column(
+              children: [
+                CircularPercentIndicator(
+                  radius: 70,
+                  lineWidth: 13.0,
+                  animation: true,
+                  animationDuration: 1500,
+                  percent: humidityPercent,
+                  center: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.water_drop_outlined,
+                        color: humidityColor,
+                        size: 22,
+                      ),
+                      Text(
+                        '$_humidity%',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  circularStrokeCap: CircularStrokeCap.round,
+                  progressColor: humidityColor,
+                  backgroundColor: humidityColor.withOpacity(0.2),
+                  footer: Padding(
+                    padding: const EdgeInsets.only(top: 10.0),
+                    child: Text(
+                      'Humidity',
                       style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                         color: Colors.black87,
                       ),
                     ),
-                  ],
-                ),
-                circularStrokeCap: CircularStrokeCap.round,
-                progressColor: humidityColor,
-                backgroundColor: humidityColor.withOpacity(0.2),
-                footer: Padding(
-                  padding: const EdgeInsets.only(top: 10.0),
-                  child: Text(
-                    'Humidity',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
-                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              _buildHumidityStatusText(),
-            ],
-          ),
-        ],
+                const SizedBox(height: 8),
+                _buildHumidityStatusText(),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -618,13 +624,17 @@ class _SensorDataState extends State<SensorData>
         const SizedBox(width: 16),
         Expanded(
           child: _buildAnimatedSafetyCard(
-            title: 'Distance',
-            value: '$_distance cm',
-            subtitle: _objectDetected ? 'Detected' : 'Clear',
-            icon: Icons.sensors_outlined,
-            isAlert: _objectDetected && _distance < 10,
+            title: 'Fan',
+            value: _fanisOn ? 'ON' : 'OFF',
+            subtitle: _fanisOn ? 'Running' : 'Stopped',
+            icon: Icons.wind_power_outlined,
+            isAlert: false, // Fan state is not an alert condition
             alertColor: Colors.amber.shade700,
             normalColor: Colors.green.shade700,
+            onTap: () {
+              // Toggle fan state
+              _updateDeviceState('fanisOn', !_fanisOn);
+            },
           ),
         ),
       ],
@@ -639,129 +649,151 @@ class _SensorDataState extends State<SensorData>
     required bool isAlert,
     required Color alertColor,
     required Color normalColor,
+    VoidCallback? onTap,
   }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 500),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isAlert
-            ? alertColor.withOpacity(0.1)
-            : normalColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-        border: isAlert
-            ? Border.all(color: alertColor.withOpacity(0.5), width: 1.5)
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isAlert
-                      ? alertColor.withOpacity(0.2)
-                      : normalColor.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  color: isAlert ? alertColor : normalColor,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isAlert ? alertColor : Colors.black87,
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 500),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isAlert
+              ? alertColor.withOpacity(0.1)
+              : normalColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
             ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
+          ],
+          border: isAlert
+              ? Border.all(color: alertColor.withOpacity(0.5), width: 1.5)
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isAlert
+                        ? alertColor.withOpacity(0.2)
+                        : normalColor.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: title == 'Fan'
+                        ? (_fanisOn
+                            ? Colors.blue.shade700
+                            : Colors.grey.shade700)
+                        : (isAlert ? alertColor : normalColor),
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: title == 'Fan'
+                    ? (_fanisOn ? Colors.blue.shade700 : Colors.grey.shade700)
+                    : (isAlert ? alertColor : Colors.black87),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: title == 'Fan'
+                        ? (_fanisOn
+                            ? Colors.blue.shade700
+                            : Colors.grey.shade700)
+                        : (isAlert ? alertColor : normalColor),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: (title == 'Fan'
+                                ? (_fanisOn
+                                    ? Colors.blue.shade700
+                                    : Colors.grey.shade700)
+                                : (isAlert ? alertColor : normalColor))
+                            .withOpacity(0.3),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: title == 'Fan'
+                        ? (_fanisOn
+                            ? Colors.blue.shade700
+                            : Colors.grey.shade700)
+                        : (isAlert ? alertColor : normalColor),
+                    fontWeight: isAlert ? FontWeight.w500 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+            if (onTap != null) ...[
+              const SizedBox(height: 12),
               Container(
-                width: 8,
-                height: 8,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: isAlert ? alertColor : normalColor,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          (isAlert ? alertColor : normalColor).withOpacity(0.3),
-                      blurRadius: 4,
-                      spreadRadius: 1,
+                  color: Colors.blue.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.touch_app_rounded,
+                      color: Colors.blue.shade700,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Tap to on',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.blue.shade700,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
-              Text(
-                subtitle,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: isAlert ? alertColor : normalColor,
-                  fontWeight: isAlert ? FontWeight.w500 : FontWeight.normal,
-                ),
-              ),
             ],
-          ),
-          if (isAlert) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 4,
-              ),
-              decoration: BoxDecoration(
-                color: alertColor.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: alertColor,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Alert',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: alertColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -794,10 +826,7 @@ class _SensorDataState extends State<SensorData>
   }
 
   Widget _buildStatusSummary() {
-    final bool anyAlert = _temperature > 35 ||
-        _humidity > 80 ||
-        _gasDetected ||
-        (_objectDetected && _distance < 10);
+    final bool anyAlert = _temperature > 35 || _humidity > 80 || _gasDetected;
 
     List<Widget> alertItems = [];
 
@@ -811,10 +840,6 @@ class _SensorDataState extends State<SensorData>
 
     if (_gasDetected) {
       alertItems.add(_buildAlertItem('Gas Detected: $_gasValue'));
-    }
-
-    if (_objectDetected && _distance < 10) {
-      alertItems.add(_buildAlertItem('Object Too Close: $_distance cm'));
     }
 
     return Container(

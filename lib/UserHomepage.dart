@@ -1,9 +1,11 @@
-import 'package:door_lock_1/Verification.dart';
-import 'package:door_lock_1/sensorData/sensordataPage.dart';
+import 'package:door_lock_1/Carparking/carparking.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
+
+import 'package:door_lock_1/ControlLights/controllights.dart';
+import 'package:door_lock_1/Verification.dart';
+import 'package:door_lock_1/sensorData/sensordataPage.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({Key? key}) : super(key: key);
@@ -53,8 +55,22 @@ class _HomePageState extends State<UserHomePage>
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isSmallScreen = size.width < 600;
+    // Use MediaQuery to determine screen size and orientation
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
+    final orientation = mediaQuery.orientation;
+
+    // Responsive sizing and spacing
+    double getResponsiveValue({
+      required double smallPhone,
+      required double normalPhone,
+      required double tablet,
+    }) {
+      if (screenWidth < 360) return smallPhone;
+      if (screenWidth < 600) return normalPhone;
+      return tablet;
+    }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -77,19 +93,40 @@ class _HomePageState extends State<UserHomePage>
 
               // Main content
               SafeArea(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isSmallScreen ? 24 : size.width * 0.1,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Spacer(flex: 2),
-                      _buildHeader(isSmallScreen),
-                      const Spacer(flex: 3),
-                      _buildOptions(isSmallScreen, context),
-                      const Spacer(flex: 2),
-                    ],
+                child: Center(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Determine the maximum width for the content
+                      final maxWidth = orientation == Orientation.portrait
+                          ? constraints.maxWidth
+                          : constraints.maxWidth * 0.8;
+
+                      return SingleChildScrollView(
+                        child: SizedBox(
+                          width: maxWidth,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: getResponsiveValue(
+                                smallPhone: 16,
+                                normalPhone: 24,
+                                tablet: screenWidth * 0.1,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                SizedBox(height: screenHeight * 0.05),
+                                _buildHeader(screenWidth),
+                                SizedBox(height: screenHeight * 0.05),
+                                _buildOptions(screenWidth, context),
+                                SizedBox(height: screenHeight * 0.05),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -155,7 +192,20 @@ class _HomePageState extends State<UserHomePage>
     ];
   }
 
-  Widget _buildHeader(bool isSmallScreen) {
+  Widget _buildHeader(double screenWidth) {
+    // Responsive font sizing
+    double getTitleFontSize() {
+      if (screenWidth < 360) return 28;
+      if (screenWidth < 600) return 32;
+      return 40;
+    }
+
+    double getSubtitleFontSize() {
+      if (screenWidth < 360) return 14;
+      if (screenWidth < 600) return 16;
+      return 18;
+    }
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -168,19 +218,19 @@ class _HomePageState extends State<UserHomePage>
               ).createShader(bounds),
               child: Text(
                 'User Home',
-                style: GoogleFonts.poppins(
-                  fontSize: isSmallScreen ? 32 : 40,
+                style: TextStyle(
+                  fontSize: getTitleFontSize(),
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: 1,
                 ),
               ),
             ),
-            SizedBox(height: isSmallScreen ? 16 : 20),
+            SizedBox(height: screenWidth < 600 ? 16 : 20),
             Text(
               'Choose an option to proceed',
-              style: GoogleFonts.poppins(
-                fontSize: isSmallScreen ? 16 : 18,
+              style: TextStyle(
+                fontSize: getSubtitleFontSize(),
                 color: Colors.white70,
                 letterSpacing: 0.5,
               ),
@@ -191,15 +241,26 @@ class _HomePageState extends State<UserHomePage>
     );
   }
 
-  Widget _buildOptions(bool isSmallScreen, BuildContext context) {
+  Widget _buildOptions(double screenWidth, BuildContext context) {
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: Container(
+        child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 600),
           child: Column(
             children: [
+              _OptionCard(
+                icon: Icons.lock_open_rounded,
+                title: 'Control lights',
+                subtitle: 'Control lights from anywhere in the world',
+                onTap: () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => ControlLights()));
+                },
+                screenWidth: screenWidth,
+              ),
+              SizedBox(height: screenWidth < 600 ? 24 : 32),
               _OptionCard(
                 icon: Icons.lock_open_rounded,
                 title: 'Unlock Door',
@@ -210,9 +271,20 @@ class _HomePageState extends State<UserHomePage>
                       MaterialPageRoute(
                           builder: (context) => VerificationScreen()));
                 },
-                isSmallScreen: isSmallScreen,
+                screenWidth: screenWidth,
               ),
-              SizedBox(height: isSmallScreen ? 24 : 32),
+              SizedBox(height: screenWidth < 600 ? 24 : 32),
+              _OptionCard(
+                icon: Icons.lock_open_rounded,
+                title: 'Access Car parking',
+                subtitle: 'Access the parking with a click',
+                onTap: () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => CarParking()));
+                },
+                screenWidth: screenWidth,
+              ),
+              SizedBox(height: screenWidth < 600 ? 24 : 32),
               _OptionCard(
                 icon: Icons.sensors_rounded,
                 title: 'Sensor Data',
@@ -220,9 +292,8 @@ class _HomePageState extends State<UserHomePage>
                 onTap: () {
                   Navigator.push(context,
                       MaterialPageRoute(builder: (context) => SensorData()));
-                  // Navigate to sensor data screen
                 },
-                isSmallScreen: isSmallScreen,
+                screenWidth: screenWidth,
               ),
             ],
           ),
@@ -237,7 +308,7 @@ class _OptionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final bool isSmallScreen;
+  final double screenWidth;
 
   const _OptionCard({
     Key? key,
@@ -245,11 +316,36 @@ class _OptionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    required this.isSmallScreen,
+    required this.screenWidth,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Responsive sizing
+    double getIconSize() {
+      if (screenWidth < 360) return 32;
+      if (screenWidth < 600) return 40;
+      return 48;
+    }
+
+    double getTitleFontSize() {
+      if (screenWidth < 360) return 18;
+      if (screenWidth < 600) return 20;
+      return 24;
+    }
+
+    double getSubtitleFontSize() {
+      if (screenWidth < 360) return 12;
+      if (screenWidth < 600) return 14;
+      return 16;
+    }
+
+    double getPadding() {
+      if (screenWidth < 360) return 16;
+      if (screenWidth < 600) return 20;
+      return 24;
+    }
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: AnimatedContainer(
@@ -272,23 +368,23 @@ class _OptionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             onTap: onTap,
             child: Padding(
-              padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+              padding: EdgeInsets.all(getPadding()),
               child: Row(
                 children: [
                   Icon(
                     icon,
-                    size: isSmallScreen ? 40 : 48,
+                    size: getIconSize(),
                     color: Colors.white,
                   ),
-                  SizedBox(width: isSmallScreen ? 16 : 20),
+                  SizedBox(width: getPadding()),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           title,
-                          style: GoogleFonts.poppins(
-                            fontSize: isSmallScreen ? 20 : 24,
+                          style: TextStyle(
+                            fontSize: getTitleFontSize(),
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -296,8 +392,8 @@ class _OptionCard extends StatelessWidget {
                         SizedBox(height: 8),
                         Text(
                           subtitle,
-                          style: GoogleFonts.poppins(
-                            fontSize: isSmallScreen ? 14 : 16,
+                          style: TextStyle(
+                            fontSize: getSubtitleFontSize(),
                             color: Colors.white70,
                           ),
                         ),
